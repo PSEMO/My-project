@@ -15,9 +15,9 @@ public class characterController : MonoBehaviour
 
     enum Skills
     {
+        Move,
         Jump,
-        Dash,
-        Move
+        Dash
     }
 
     Skills CurrentSkill = Skills.Move;
@@ -30,14 +30,13 @@ public class characterController : MonoBehaviour
     BoxCollider2D BoxColl;
 
     float distanceToTheGround = 0;
-    float distanceToSides = 0;
     float SizeOfObjVert = 0;
     float SizeOfObjHori = 0;
 
     bool HasDoubleJumped = false;
     bool HasJumped = false;
 
-    bool Right, Left, Up;//Controlls
+    bool Right, Left;//Controlls
 
     bool onWall = false;
 
@@ -57,15 +56,26 @@ public class characterController : MonoBehaviour
     float dashCoolDown = 2;
 
     Image DashUI;
+    Image DashUIShadow;
     Text DashText;
     Transform canvas;
 
+    [SerializeField] Sprite[] Mechanics = new Sprite[3];
+
+    bool FacingRight = true;
+
+    GameObject WonScreen;
+    GameObject LostScreen;
+
     void Start()
     {
-
         canvas = GameObject.Find("Canvas").transform;
-        DashUI = canvas.Find("DashUI").Find("Image").GetComponent<Image>();
+        DashUI = canvas.Find("DashUI").GetComponent<Image>();
+        DashUIShadow = canvas.Find("DashUI").Find("Image").GetComponent<Image>();
         DashText = canvas.Find("DashUI").Find("Image").Find("Text").GetComponent<Text>();
+
+        WonScreen = canvas.Find("GameWon").gameObject;
+        LostScreen = canvas.Find("GameLost").gameObject;
 
         ResetJump();
 
@@ -76,10 +86,11 @@ public class characterController : MonoBehaviour
         SizeOfObjHori = BoxColl.bounds.extents.x;
 
         distanceToTheGround = SizeOfObjVert + 0.02f;
-        distanceToSides = SizeOfObjHori;
 
         DashText.text = "";
-        DashUI.fillAmount = 0;
+        DashUIShadow.fillAmount = 0;
+
+        DashUI.sprite = Mechanics[0];
     }
 
     // Update is called once per frame
@@ -91,7 +102,7 @@ public class characterController : MonoBehaviour
         {
             WallHit wallhit = OnTheWall();
 
-            if (!OnTheGround() && (wallhit == WallHit.Right || wallhit == WallHit.Left))
+            if (wallhit == WallHit.Right || wallhit == WallHit.Left)
             {
                 onWall = true;
 
@@ -199,13 +210,25 @@ public class characterController : MonoBehaviour
                 if (!Left)
                 {
                     if (!onWall)
+                    {
                         transform.position += new Vector3(CurrentDePosition, 0, 0);
+                        if (!FacingRight)
+                        {
+                            Flip();
+                        }
+                    }
                 }
             }
             else if (Left)
             {
                 if (!onWall)
+                {
                     transform.position += new Vector3(-CurrentDePosition, 0, 0);
+                    if (FacingRight)
+                    {
+                        Flip();
+                    }
+                }
             }
 
 
@@ -268,7 +291,7 @@ public class characterController : MonoBehaviour
                 canDash = true;
             }
 
-            DashUI.fillAmount = percentage;
+            DashUIShadow.fillAmount = percentage;
         }
 
         if (Input.GetKeyDown(KeyCode.Z))
@@ -283,10 +306,41 @@ public class characterController : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (OnTheGround())
+        if (collision.gameObject.CompareTag("Ground"))
         {
             ResetJump();
         }
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.gameObject.CompareTag("GameWon"))
+        {
+            ActivateEndScreen(true);
+        }
+        else if(collision.gameObject.CompareTag("GameLost"))
+        {
+            ActivateEndScreen(false);
+        }
+    }
+
+    void ActivateEndScreen(bool won)
+    {
+        if(won)
+        {
+            WonScreen.SetActive(true);
+        }
+        else
+        {
+            LostScreen.SetActive(true);
+        }
+        Time.timeScale = 0;
+    }
+
+    void Flip()
+    {
+        FacingRight = !FacingRight;
+        transform.localScale = new Vector3 (transform.localScale.x * -1, transform.localScale.y, transform.localScale.z);
     }
 
     void Jump()
@@ -308,7 +362,6 @@ public class characterController : MonoBehaviour
         rb.velocity = Vector3.zero;
         CanMove = false;
 
-        HasDoubleJumped = true;
         HasJumped = true;
     }
 
@@ -339,15 +392,6 @@ public class characterController : MonoBehaviour
         return hit;
     }
 
-    bool OnTheGround()
-    {
-        int LayerMask = 64; //0000001000
-
-        bool hit = Physics2D.BoxCast(transform.position, new Vector2(0.02f, SizeOfObjVert), 0, Vector2.down, distanceToSides, LayerMask);
-
-        return hit;
-    }
-
     void NextSkill()
     {
         if (CurrentSkill == Skills.Move)
@@ -362,6 +406,8 @@ public class characterController : MonoBehaviour
         {
             CurrentSkill = Skills.Move;
         }
+
+        DashUI.sprite = Mechanics[(int)CurrentSkill];
     }
     void PrevSkill()
     {
@@ -377,5 +423,7 @@ public class characterController : MonoBehaviour
         {
             CurrentSkill = Skills.Jump;
         }
+
+        DashUI.sprite = Mechanics[(int)CurrentSkill];
     }
 }

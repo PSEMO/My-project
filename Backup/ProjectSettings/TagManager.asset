@@ -5,9 +5,6 @@ TagManager:
   serializedVersion: 2
   tags:
   - Wall
-  - Ground
-  - GameWon
-  - GameLost
   layers:
   - Default
   - TransparentFX
